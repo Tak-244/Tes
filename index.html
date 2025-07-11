@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VoidSearch Dashboard</title>
+  <title>LUFFY EYES</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,8 +18,19 @@
   </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
-  <div class="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-8 space-y-6 fade-in">
-    <h1 class="text-3xl font-bold text-center text-blue-600">🔎 VoidSearch Dashboard</h1>
+
+  <!-- LOGIN -->
+  <div id="login" class="w-full max-w-md bg-white shadow-lg rounded-xl p-6 space-y-4 fade-in">
+    <h2 class="text-2xl font-bold text-center text-blue-600">🔐 Acesso ao LUFFY EYES</h2>
+    <input id="user" type="text" placeholder="Usuário" class="w-full p-2 border rounded" />
+    <input id="pass" type="password" placeholder="Senha" class="w-full p-2 border rounded" />
+    <button onclick="entrar()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">Entrar</button>
+    <div id="erroLogin" class="text-red-500 text-sm hidden">Usuário ou senha incorretos.</div>
+  </div>
+
+  <!-- PAINEL -->
+  <div id="painel" class="hidden w-full max-w-3xl bg-white rounded-2xl shadow-xl p-8 space-y-6 fade-in">
+    <h1 class="text-3xl font-bold text-center text-blue-600">🔎 LUFFY EYES</h1>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
@@ -64,6 +75,23 @@
   </div>
 
   <script>
+    const autorizados = {
+      "luffy": "12345",
+      "admin": "admin123"
+    };
+
+    function entrar() {
+      const user = document.getElementById("user").value;
+      const pass = document.getElementById("pass").value;
+      const erro = document.getElementById("erroLogin");
+      if (autorizados[user] === pass) {
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("painel").classList.remove("hidden");
+      } else {
+        erro.classList.remove("hidden");
+      }
+    }
+
     async function consultar() {
       const base = document.getElementById('base').value;
       const info = encodeURIComponent(document.getElementById('info').value.trim());
@@ -74,20 +102,41 @@
         return;
       }
 
-      resultado.innerText = "⏳ Consultando...";
-
-      const url = `https://voidsearch.localto.net/api/search?Access-Key=WM3t-Av5u-thfP-GiBV-sM3B&Base=${base}&Info=${info}`;
+      resultado.innerHTML = "⏳ Consultando...";
+      const url = `https://tes-mocha-omega.vercel.app/api/proxy?base=${base}&info=${info}`;
 
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error("Erro na requisição.");
         const data = await res.json();
-
-        resultado.innerText = JSON.stringify(data, null, 2);
+        resultado.innerHTML = renderData(data);
       } catch (err) {
         resultado.innerText = "⚠️ Erro ao buscar os dados:\n" + err.message;
       }
     }
+
+    function renderData(data) {
+      if (typeof data !== "object") return `<div>${data}</div>`;
+      if (Array.isArray(data)) {
+        if (data.length === 0) return "<div>🔍 Nenhum resultado encontrado.</div>";
+        return data.map(item => `<div class="mb-4 border-b pb-2">${renderData(item)}</div>`).join("");
+      }
+      return `
+        <div class="space-y-1">
+          ${Object.entries(data).map(([key, value]) => {
+            return `<div><strong class="text-blue-700">${key}</strong>: ${formatValue(value)}</div>`;
+          }).join("")}
+        </div>
+      `;
+    }
+
+    function formatValue(val) {
+      if (typeof val === "object" && val !== null) {
+        return `<pre class="bg-gray-100 p-2 rounded">${JSON.stringify(val, null, 2)}</pre>`;
+      }
+      return val === "" || val === null ? "<span class='text-gray-500'>(vazio)</span>" : val;
+    }
   </script>
+
 </body>
 </html>
