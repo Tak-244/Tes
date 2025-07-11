@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LUFFY EYES</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; }
@@ -17,7 +15,7 @@
     }
   </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-6">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
 
   <!-- LOGIN -->
   <div id="login" class="w-full max-w-md bg-white shadow-lg rounded-xl p-6 space-y-4 fade-in">
@@ -29,8 +27,14 @@
   </div>
 
   <!-- PAINEL -->
-  <div id="painel" class="hidden w-full max-w-3xl bg-white rounded-2xl shadow-xl p-8 space-y-6 fade-in">
-    <h1 class="text-3xl font-bold text-center text-blue-600">🔎 LUFFY EYES</h1>
+  <div id="painel" class="hidden w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6 space-y-6 fade-in">
+    <div class="flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-blue-600">🔎 LUFFY EYES</h1>
+      <div>
+        <button onclick="mostrarUsuarios()" class="text-sm text-blue-600 mr-4 hover:underline">👤 Usuários</button>
+        <button onclick="logout()" class="text-sm text-red-500 hover:underline">Sair</button>
+      </div>
+    </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
@@ -65,31 +69,57 @@
       </div>
     </div>
 
-    <button onclick="consultar()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-md transition duration-200">
-      Consultar
-    </button>
+    <div class="flex items-center gap-2">
+      <button onclick="consultar()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-md transition duration-200">
+        Consultar
+      </button>
+      <button onclick="exportarJSON()" class="text-sm px-3 py-2 bg-gray-200 rounded hover:bg-gray-300">⬇️ Exportar</button>
+    </div>
 
     <div id="resultado" class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 border p-4 rounded-md h-80 overflow-y-auto">
       📝 Resultado aparecerá aqui...
     </div>
   </div>
 
+  <!-- MODAL USUÁRIOS -->
+  <div id="modalUsuarios" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full">
+      <h2 class="text-lg font-bold mb-2">🔧 Gerenciar Usuários</h2>
+      <ul id="listaUsuarios" class="mb-4"></ul>
+      <input type="text" id="novoUsuario" class="w-full p-2 mb-2 border rounded" placeholder="Novo usuário" />
+      <input type="password" id="novaSenha" class="w-full p-2 mb-4 border rounded" placeholder="Senha" />
+      <div class="flex justify-end gap-2">
+        <button onclick="fecharUsuarios()" class="text-gray-500 hover:underline">Cancelar</button>
+        <button onclick="adicionarUsuario()" class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const autorizados = {
+    let autorizados = {
       "luffy": "12345",
       "admin": "admin123"
     };
+    let usuarioAtual = null;
 
     function entrar() {
       const user = document.getElementById("user").value;
       const pass = document.getElementById("pass").value;
       const erro = document.getElementById("erroLogin");
       if (autorizados[user] === pass) {
+        usuarioAtual = user;
         document.getElementById("login").classList.add("hidden");
         document.getElementById("painel").classList.remove("hidden");
+        erro.classList.add("hidden");
       } else {
         erro.classList.remove("hidden");
       }
+    }
+
+    function logout() {
+      document.getElementById("login").classList.remove("hidden");
+      document.getElementById("painel").classList.add("hidden");
+      usuarioAtual = null;
     }
 
     async function consultar() {
@@ -107,7 +137,10 @@
 
       try {
         const res = await fetch(url);
-        if (!res.ok) throw new Error("Erro na requisição.");
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+          throw new Error("Resposta inválida da API.");
+        }
         const data = await res.json();
         resultado.innerHTML = renderData(data);
       } catch (err) {
@@ -136,7 +169,37 @@
       }
       return val === "" || val === null ? "<span class='text-gray-500'>(vazio)</span>" : val;
     }
-  </script>
 
+    function exportarJSON() {
+      const resultado = document.getElementById('resultado').innerText;
+      const blob = new Blob([resultado], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `resultado_${Date.now()}.json`;
+      link.click();
+    }
+
+    function mostrarUsuarios() {
+      const lista = document.getElementById("listaUsuarios");
+      lista.innerHTML = Object.entries(autorizados).map(([user, pass]) => `<li>${user}</li>`).join("");
+      document.getElementById("modalUsuarios").classList.remove("hidden");
+    }
+
+    function fecharUsuarios() {
+      document.getElementById("modalUsuarios").classList.add("hidden");
+    }
+
+    function adicionarUsuario() {
+      const user = document.getElementById("novoUsuario").value.trim();
+      const pass = document.getElementById("novaSenha").value.trim();
+      if (user && pass) {
+        autorizados[user] = pass;
+        alert(`Usuário '${user}' adicionado!`);
+        document.getElementById("novoUsuario").value = "";
+        document.getElementById("novaSenha").value = "";
+        mostrarUsuarios();
+      }
+    }
+  </script>
 </body>
 </html>
